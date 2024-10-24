@@ -198,6 +198,10 @@
             const ceilingCoats = parseInt(document.getElementById(`ceilingCoats${i}`).value) || 2;
             const trimCoats = parseInt(document.getElementById(`trimCoats${i}`).value) || 2;
 
+            // Get the selected wall paint type
+            const wallPaintType = document.getElementById(`wallPaintType${i}`).value;
+            const wallPaintPrice = paintPrices[wallPaintType];
+
             // Calculate wall cost
             if (document.getElementById(`includeWalls${i}`).checked) {
                 const wallLaborHours = (areaWalls / wallRate) * wallCoats;
@@ -205,7 +209,7 @@
 
                 const coveragePerGallon = 400; // Coverage per gallon
                 const gallonsNeededWalls = Math.ceil((areaWalls / coveragePerGallon) * wallCoats);
-                roomCost += gallonsNeededWalls * paintPrices.superPaint;
+                roomCost += gallonsNeededWalls * wallPaintPrice; // Use selected paint price
             }
 
             // Calculate ceiling cost
@@ -215,7 +219,7 @@
 
                 const coveragePerGallon = 400; // Coverage per gallon for ceilings
                 const gallonsNeededCeilings = Math.ceil((areaCeilings / coveragePerGallon) * ceilingCoats);
-                roomCost += gallonsNeededCeilings * paintPrices.ceilingPaint;
+                roomCost += gallonsNeededCeilings * paintPrices.ceilingPaint; // Fixed for ceiling paint
             }
 
             // Calculate trim cost
@@ -225,7 +229,7 @@
 
                 const coveragePerGallon = 400; // Coverage per gallon for trims
                 const gallonsNeededTrims = Math.ceil((trimLength / coveragePerGallon) * trimCoats);
-                roomCost += gallonsNeededTrims * paintPrices.trimPaint;
+                roomCost += gallonsNeededTrims * paintPrices.trimPaint; // Fixed for trim paint
             }
 
             // Calculate door cost
