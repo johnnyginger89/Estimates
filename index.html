@@ -71,11 +71,6 @@
             text-align: center;
             margin-top: 20px;
         }
-        .gallons-needed {
-            margin-top: 10px;
-            font-weight: bold;
-            color: #333;
-        }
     </style>
 </head>
 <body>
@@ -128,9 +123,6 @@
             <label for="numDoors${roomCount}">Number of Doors:</label>
             <input type="number" id="numDoors${roomCount}" min="0" value="0" oninput="calculateCosts()">
 
-            <label>Include Doors:</label>
-            <input type="checkbox" id="includeDoors${roomCount}" onchange="calculateCosts()"> Yes
-
             <label for="wallPaintType${roomCount}">Select Wall Paint Type:</label>
             <select id="wallPaintType${roomCount}" onchange="calculateCosts()">
                 <option value="superPaint">Super Paint</option>
@@ -162,7 +154,6 @@
             </select>
 
             <h2 class="result" id="result${roomCount}"></h2>
-            <div class="gallons-needed" id="gallonsNeeded${roomCount}"></div>
         </div>`;
         document.getElementById('roomsContainer').insertAdjacentHTML('beforeend', roomHTML);
         calculateCosts();  // Recalculate to include the new room
@@ -172,15 +163,21 @@
         const paintPrices = {
             superPaint: 73.33,
             emeraldPaint: 110,
+            doorPaint: 106.33,
             ceilingPaint: 36.65,
             trimPaint: 106.33
         };
+
+        const laborRate = 40; // Hourly rate
+        const wallRate = 120; // sqft/hour/coat
+        const ceilingRate = 120; // sqft/hour/coat
+        const trimRate = 40; // linear ft/hour/coat
 
         let totalCost = 0;
 
         const sundriesCost = parseFloat(document.getElementById('sundries').value) || 0;
         const prepHours = parseFloat(document.getElementById('prepHours').value) || 0;
-        const laborCost = prepHours * 90; // Updated labor cost per hour
+        const laborCost = prepHours * laborRate; // Labor cost for prep hours
 
         for (let i = 1; i <= roomCount; i++) {
             const roomSelected = document.getElementById(`selectRoom${i}`)?.checked;
@@ -197,46 +194,49 @@
             const trimLength = 2 * (length + width); // Perimeter for trim calculation
 
             let roomCost = 0;
-            let gallonsWalls = 0;
-            let gallonsCeilings = 0;
-            let gallonsTrims = 0;
-
-            const wallPaintType = document.getElementById(`wallPaintType${i}`).value;
-            const numWallCoats = parseInt(document.getElementById(`wallCoats${i}`).value) || 2;
-            const numCeilingCoats = parseInt(document.getElementById(`ceilingCoats${i}`).value) || 2;
-            const numTrimCoats = parseInt(document.getElementById(`trimCoats${i}`).value) || 2;
+            const wallCoats = parseInt(document.getElementById(`wallCoats${i}`).value) || 2;
+            const ceilingCoats = parseInt(document.getElementById(`ceilingCoats${i}`).value) || 2;
+            const trimCoats = parseInt(document.getElementById(`trimCoats${i}`).value) || 2;
 
             // Calculate wall cost
             if (document.getElementById(`includeWalls${i}`).checked) {
+                const wallLaborHours = (areaWalls / wallRate) * wallCoats;
+                roomCost += wallLaborHours * laborRate;
+
                 const coveragePerGallon = 400; // Coverage per gallon
-                gallonsWalls = Math.ceil(areaWalls / coveragePerGallon) * numWallCoats;
-                roomCost += gallonsWalls * paintPrices[wallPaintType];
+                const gallonsNeededWalls = Math.ceil((areaWalls / coveragePerGallon) * wallCoats);
+                roomCost += gallonsNeededWalls * paintPrices.superPaint;
             }
 
             // Calculate ceiling cost
             if (document.getElementById(`includeCeilings${i}`).checked) {
-                const coveragePerGallon = 350; // Coverage per gallon for ceilings
-                gallonsCeilings = Math.ceil(areaCeilings / coveragePerGallon) * numCeilingCoats;
-                roomCost += gallonsCeilings * paintPrices.ceilingPaint;
+                const ceilingLaborHours = (areaCeilings / ceilingRate) * ceilingCoats;
+                roomCost += ceilingLaborHours * laborRate;
+
+                const coveragePerGallon = 400; // Coverage per gallon for ceilings
+                const gallonsNeededCeilings = Math.ceil((areaCeilings / coveragePerGallon) * ceilingCoats);
+                roomCost += gallonsNeededCeilings * paintPrices.ceilingPaint;
             }
 
             // Calculate trim cost
             if (document.getElementById(`includeTrims${i}`).checked) {
-                const coveragePerGallon = 300; // Coverage per gallon for trims
-                gallonsTrims = Math.ceil(trimLength / coveragePerGallon) * numTrimCoats;
-                roomCost += gallonsTrims * paintPrices.trimPaint;
+                const trimLaborHours = (trimLength / trimRate) * trimCoats;
+                roomCost += trimLaborHours * laborRate;
+
+                const coveragePerGallon = 400; // Coverage per gallon for trims
+                const gallonsNeededTrims = Math.ceil((trimLength / coveragePerGallon) * trimCoats);
+                roomCost += gallonsNeededTrims * paintPrices.trimPaint;
             }
 
-            // Calculate door cost if included
-            let doorsCost = 0;
-            if (document.getElementById(`includeDoors${i}`).checked) {
-                doorsCost = numDoors * 65; // $65 per door
-                roomCost += doorsCost;
+            // Calculate door cost
+            if (numDoors > 0) {
+                const doorLaborHours = numDoors; // 1 hour per door
+                roomCost += doorLaborHours * laborRate;
+                roomCost += numDoors * paintPrices.doorPaint; // Door paint cost
             }
 
             totalCost += roomCost;
             document.getElementById(`result${i}`).innerText = `${roomName} Estimated Cost: $${roomCost.toFixed(2)}`;
-            document.getElementById(`gallonsNeeded${i}`).innerText = `Gallons Needed: Walls: ${gallonsWalls}, Ceilings: ${gallonsCeilings}, Trims: ${gallonsTrims}, Doors: ${numDoors}`;
         }
 
         totalCost += sundriesCost + laborCost;
@@ -256,9 +256,7 @@
         for (let i = 1; i <= roomCount; i++) {
             if (document.getElementById(`selectRoom${i}`)?.checked) {
                 const resultText = document.getElementById(`result${i}`).innerText;
-                const gallonsText = document.getElementById(`gallonsNeeded${i}`).innerText;
-                doc.text(resultText, 20, 50 + (i * 20));
-                doc.text(gallonsText, 20, 55 + (i * 20));
+                doc.text(resultText, 20, 50 + (i * 10));
             }
         }
 
