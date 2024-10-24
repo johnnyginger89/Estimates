@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interior Painting Cost Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .company-name {
+            font-size: 1.5em;
+            color: #003366;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .room {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #fff;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        input[type="number"], input[type="text"], select {
+            width: calc(100% - 20px);
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #003366;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #002244;
+        }
+        .note {
+            margin: 20px 0;
+            font-style: italic;
+            color: #555;
+        }
+        .result {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #28a745;
+            margin-top: 10px;
+        }
+        .total-price {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #003366;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="company-name">Grandview Painting</div>
+<h1>Interior Painting Cost Calculator</h1>
+
+<label for="customerName">Customer Name:</label>
+<input type="text" id="customerName" placeholder="Enter your name" required>
+
+<form id="costCalculator">
+    <div id="roomsContainer"></div>
+    <button type="button" onclick="addRoom()">Add Room</button>
+    
+    <div class="total-price" id="totalPrice">Total Estimated Cost: $0.00</div>
+
+    <label for="sundries">Sundries Costs ($):</label>
+    <input type="number" id="sundries" placeholder="Enter sundries costs" value="0" oninput="calculateCosts()">
+
+    <label for="prepHours">Prep Hours:</label>
+    <input type="number" id="prepHours" placeholder="Enter prep hours" value="0" oninput="calculateCosts()">
+
+    <button type="button" onclick="exportToPDF()">Export to PDF</button>
+    <div class="note">*Please note that these are approximate prices.</div>
+</form>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+    let roomCount = 1; // Start with one room pre-loaded
+
+    function addRoom() {
+        roomCount++;
+        const roomHTML = `
+        <div class="room" id="room${roomCount}">
+            <label>
+                <input type="checkbox" id="selectRoom${roomCount}" checked onchange="calculateCosts()"> Select Room ${roomCount}
+            </label>
+            <label for="roomName${roomCount}">Room Name:</label>
+            <input type="text" id="roomName${roomCount}" required>
+
+            <label for="roomLength${roomCount}">Room Length (ft):</label>
+            <input type="number" id="roomLength${roomCount}" required oninput="calculateCosts()">
+
+            <label for="roomWidth${roomCount}">Room Width (ft):</label>
+            <input type="number" id="roomWidth${roomCount}" required oninput="calculateCosts()">
+
+            <label for="roomHeight${roomCount}">Room Height (ft):</label>
+            <input type="number" id="roomHeight${roomCount}" required oninput="calculateCosts()">
+
+            <label for="numDoors${roomCount}">Number of Doors:</label>
+            <input type="number" id="numDoors${roomCount}" min="0" value="0" oninput="calculateCosts()">
+
+            <label for="wallPaintType${roomCount}">Select Wall Paint Type:</label>
+            <select id="wallPaintType${roomCount}" onchange="calculateCosts()">
+                <option value="superPaint">Super Paint</option>
+                <option value="emeraldPaint">Emerald Paint</option>
+            </select>
+
+            <label>Include Walls:</label>
+            <input type="checkbox" id="includeWalls${roomCount}" checked onchange="calculateCosts()"> Yes
+            <label for="wallCoats${roomCount}">Coats (2 or 3):</label>
+            <select id="wallCoats${roomCount}" onchange="calculateCosts()">
+                <option value="2">2</option>
+                <option value="3">3</option>
+            </select>
+
+            <label>Include Ceilings:</label>
+            <input type="checkbox" id="includeCeilings${roomCount}" checked onchange="calculateCosts()"> Yes
+            <label for="ceilingCoats${roomCount}">Coats (2 or 3):</label>
+            <select id="ceilingCoats${roomCount}" onchange="calculateCosts()">
+                <option value="2">2</option>
+                <option value="3">3</option>
+            </select>
+
+            <label>Include Trims:</label>
+            <input type="checkbox" id="includeTrims${roomCount}" checked onchange="calculateCosts()"> Yes
+            <label for="trimCoats${roomCount}">Coats (2 or 3):</label>
+            <select id="trimCoats${roomCount}" onchange="calculateCosts()">
+                <option value="2">2</option>
+                <option value="3">3</option>
+            </select>
+
+            <h2 class="result" id="result${roomCount}"></h2>
+        </div>`;
+        document.getElementById('roomsContainer').insertAdjacentHTML('beforeend', roomHTML);
+        calculateCosts();  // Recalculate to include the new room
+    }
+
+    function calculateCosts() {
+        const paintPrices = {
+            superPaint: 73.33,
+            emeraldPaint: 110,
+            doorPaint: 106.33,
+            ceilingPaint: 36.65,
+            trimPaint: 106.33
+        };
+
+        let totalCost = 0;
+
+        const sundriesCost = parseFloat(document.getElementById('sundries').value) || 0;
+        const prepHours = parseFloat(document.getElementById('prepHours').value) || 0;
+        const laborCost = prepHours * 76; // Labor cost per hour
+
+        for (let i = 1; i <= roomCount; i++) {
+            const roomSelected = document.getElementById(`selectRoom${i}`)?.checked;
+            if (!roomSelected) continue;
+
+            const roomName = document.getElementById(`roomName${i}`).value;
+            const length = parseFloat(document.getElementById(`roomLength${i}`).value) || 0;
+            const width = parseFloat(document.getElementById(`roomWidth${i}`).value) || 0;
+            const height = parseFloat(document.getElementById(`roomHeight${i}`).value) || 0;
+            const numDoors = parseInt(document.getElementById(`numDoors${i}`).value) || 0;
+
+            const areaWalls = 2 * height * (length + width); // Total wall surface area
+            const areaCeilings = length * width; // Ceiling area
+            const areaDoors = numDoors * 21; // Assuming each door is 21 sq ft
+            const trimLength = 2 * (length + width); // Perimeter for trim calculation
+
+            let roomCost = 0;
+            const wallPaintType = document.getElementById(`wallPaintType${i}`).value;
+            const numWallCoats = parseInt(document.getElementById(`wallCoats${i}`).value) || 2;
+            const numCeilingCoats = parseInt(document.getElementById(`ceilingCoats${i}`).value) || 2;
+            const numTrimCoats = parseInt(document.getElementById(`trimCoats${i}`).value) || 2;
+
+            // Calculate wall cost
+            if (document.getElementById(`includeWalls${i}`).checked) {
+                const coveragePerGallon = 400; // Coverage per gallon
+                const gallonsNeededWalls = Math.ceil(areaWalls / coveragePerGallon) * numWallCoats;
+                roomCost += gallonsNeededWalls * paintPrices[wallPaintType];
+            }
+
+            // Calculate ceiling cost
+            if (document.getElementById(`includeCeilings${i}`).checked) {
+                const coveragePerGallon = 350; // Coverage per gallon for ceilings
+                const gallonsNeededCeilings = Math.ceil(areaCeilings / coveragePerGallon) * numCeilingCoats;
+                roomCost += gallonsNeededCeilings * paintPrices.ceilingPaint;
+            }
+
+            // Calculate trim cost
+            if (document.getElementById(`includeTrims${i}`).checked) {
+                const coveragePerGallon = 300; // Coverage per gallon for trims
+                const gallonsNeededTrims = Math.ceil(trimLength / coveragePerGallon) * numTrimCoats;
+                roomCost += gallonsNeededTrims * paintPrices.trimPaint;
+            }
+
+            totalCost += roomCost;
+            document.getElementById(`result${i}`).innerText = `${roomName} Estimated Cost: $${roomCost.toFixed(2)}`;
+        }
+
+        totalCost += sundriesCost + laborCost;
+        document.getElementById('totalPrice').innerText = `Total Estimated Cost: $${totalCost.toFixed(2)}`;
+    }
+
+    function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        doc.setFontSize(16);
+        doc.text("Interior Painting Cost Estimate", 20, 20);
+        doc.setFontSize(12);
+        doc.text(`Customer Name: ${document.getElementById('customerName').value}`, 20, 30);
+        doc.text(document.getElementById('totalPrice').innerText, 20, 40);
+
+        for (let i = 1; i <= roomCount; i++) {
+            if (document.getElementById(`selectRoom${i}`)?.checked) {
+                const resultText = document.getElementById(`result${i}`).innerText;
+                doc.text(resultText, 20, 50 + (i * 10));
+            }
+        }
+
+        doc.save("Painting_Cost_Estimate.pdf");
+    }
+</script>
+
+</body>
+</html>
