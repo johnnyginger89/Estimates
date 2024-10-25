@@ -85,13 +85,19 @@
     <div id="roomsContainer"></div>
     <button type="button" onclick="addRoom()">Add Room</button>
     
-    <div class="total-price" id="totalPrice">Total Estimated Cost: $0.00</div>
-
     <label for="sundries">Sundries Costs ($):</label>
     <input type="number" id="sundries" placeholder="Enter sundries costs" value="0" oninput="calculateCosts()">
 
     <label for="prepHours">Prep Hours:</label>
     <input type="number" id="prepHours" placeholder="Enter prep hours" value="0" oninput="calculateCosts()">
+
+    <div class="total-price" id="totalPrice">Total Estimated Cost: $0.00</div>
+
+    <label for="wallPaintType">Select Wall Paint Type:</label>
+    <select id="wallPaintType" onchange="calculateCosts()">
+        <option value="superPaint">Super Paint</option>
+        <option value="emeraldPaint">Emerald Paint</option>
+    </select>
 
     <button type="button" onclick="exportToPDF()">Export to PDF</button>
     <div class="note">*Please note that these are approximate prices.</div>
@@ -123,11 +129,9 @@
             <label for="numDoors${roomCount}">Number of Doors:</label>
             <input type="number" id="numDoors${roomCount}" min="0" value="0" oninput="calculateCosts()">
 
-            <label for="wallPaintType${roomCount}">Select Wall Paint Type:</label>
-            <select id="wallPaintType${roomCount}" onchange="calculateCosts()">
-                <option value="superPaint">Super Paint</option>
-                <option value="emeraldPaint">Emerald Paint</option>
-            </select>
+            <label>
+                <input type="checkbox" id="selectDoors${roomCount}" checked onchange="calculateCosts()"> Include Doors
+            </label>
 
             <label>Include Walls:</label>
             <input type="checkbox" id="includeWalls${roomCount}" checked onchange="calculateCosts()"> Yes
@@ -163,7 +167,7 @@
         const paintPrices = {
             superPaint: 73.33,
             emeraldPaint: 110,
-            doorPaint: 106.33,
+            doorPaint: 65, // Updated door paint cost
             ceilingPaint: 36.65,
             trimPaint: 106.33
         };
@@ -179,6 +183,9 @@
         const prepHours = parseFloat(document.getElementById('prepHours').value) || 0;
         const laborCost = prepHours * laborRate; // Labor cost for prep hours
 
+        let selectedWallPaintType = document.getElementById('wallPaintType').value;
+        let wallPaintPrice = paintPrices[selectedWallPaintType];
+
         for (let i = 1; i <= roomCount; i++) {
             const roomSelected = document.getElementById(`selectRoom${i}`)?.checked;
             if (!roomSelected) continue;
@@ -188,6 +195,7 @@
             const width = parseFloat(document.getElementById(`roomWidth${i}`).value) || 0;
             const height = parseFloat(document.getElementById(`roomHeight${i}`).value) || 0;
             const numDoors = parseInt(document.getElementById(`numDoors${i}`).value) || 0;
+            const doorsIncluded = document.getElementById(`selectDoors${i}`).checked;
 
             const areaWalls = 2 * height * (length + width); // Total wall surface area
             const areaCeilings = length * width; // Ceiling area
@@ -197,10 +205,6 @@
             const wallCoats = parseInt(document.getElementById(`wallCoats${i}`).value) || 2;
             const ceilingCoats = parseInt(document.getElementById(`ceilingCoats${i}`).value) || 2;
             const trimCoats = parseInt(document.getElementById(`trimCoats${i}`).value) || 2;
-
-            // Get the selected wall paint type
-            const wallPaintType = document.getElementById(`wallPaintType${i}`).value;
-            const wallPaintPrice = paintPrices[wallPaintType];
 
             // Calculate wall cost
             if (document.getElementById(`includeWalls${i}`).checked) {
@@ -232,8 +236,8 @@
                 roomCost += gallonsNeededTrims * paintPrices.trimPaint; // Fixed for trim paint
             }
 
-            // Calculate door cost
-            if (numDoors > 0) {
+            // Calculate door cost if included
+            if (numDoors > 0 && doorsIncluded) {
                 const doorLaborHours = numDoors; // 1 hour per door
                 roomCost += doorLaborHours * laborRate;
                 roomCost += numDoors * paintPrices.doorPaint; // Door paint cost
